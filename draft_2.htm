@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluating Learning and Training Effectiveness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:#0f2a4a;--navy-mid:#1a3f6f;--navy-light:#e8eef6;
+    --accent:#1d6fa8;--accent-light:#ddeef8;
+    --gold:#c89a2e;--gold-light:#fdf4e1;
+    --teal:#127a6b;--teal-light:#e1f5f1;
+    --coral:#c0432a;--coral-light:#fceae7;
+    --purple:#5a3fa8;--purple-light:#eeebfa;
+    --green:#2d7a3a;--green-light:#e5f5e8;
+    --text:#1a1a2e;--text-muted:#4a5568;--text-light:#718096;
+    --border:#d1dbe8;--bg:#f5f7fa;--white:#ffffff;
+    --card-shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.04);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;}
+  html{scroll-behavior:smooth;}
+
+  /* HEADER */
+  header{background:var(--navy);position:sticky;top:0;z-index:100;border-bottom:3px solid var(--gold);}
+  .header-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;}
+  .site-title{font-family:'DM Serif Display',serif;font-size:1.1rem;color:#fff;}
+  .site-title span{color:var(--gold);}
+  nav{display:flex;gap:0.25rem;align-items:center;flex-wrap:wrap;}
+  nav a{color:rgba(255,255,255,0.75);text-decoration:none;font-size:0.75rem;font-weight:500;padding:0.35rem 0.6rem;border-radius:4px;transition:all 0.18s;letter-spacing:0.02em;text-transform:uppercase;}
+  nav a:hover{background:rgba(255,255,255,0.12);color:#fff;}
+  nav a.active{background:var(--gold);color:var(--navy);}
+
+  /* HERO */
+  .hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 60%,#1e4d7b 100%);color:#fff;padding:4rem 2rem 3.5rem;text-align:center;position:relative;overflow:hidden;}
+  .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}
+  .hero-badge{display:inline-block;background:rgba(200,154,46,0.25);color:var(--gold);border:1px solid rgba(200,154,46,0.5);font-size:0.72rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;padding:0.3rem 1rem;border-radius:20px;margin-bottom:1.2rem;}
+  .hero h1{font-family:'DM Serif Display',serif;font-size:clamp(2rem,5vw,3.2rem);font-weight:400;line-height:1.15;margin-bottom:1rem;position:relative;}
+  .hero h1 em{font-style:italic;color:var(--gold);}
+  .hero p{font-size:1.05rem;color:rgba(255,255,255,0.8);max-width:620px;margin:0 auto 2rem;position:relative;}
+  .hero-meta{display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;}
+  .hero-meta-item{display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:rgba(255,255,255,0.7);}
+
+  /* LAYOUT */
+  .page-wrap{max-width:1100px;margin:0 auto;padding:2.5rem 2rem;}
+
+  /* START HERE */
+  .start-here{background:var(--white);border-radius:12px;border:1px solid var(--border);padding:2.5rem;margin-bottom:2.5rem;box-shadow:var(--card-shadow);}
+  .start-here h2{font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--navy);margin-bottom:0.5rem;display:flex;align-items:center;gap:0.6rem;}
+  .start-icon{width:32px;height:32px;background:var(--gold-light);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:1rem;}
+  .start-here p{color:var(--text-muted);margin-bottom:1.5rem;}
+  .outcomes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;}
+  .outcome-item{background:var(--navy-light);border-radius:8px;padding:1rem 1.1rem;border-left:3px solid var(--accent);}
+  .outcome-item .num{font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--accent);margin-bottom:0.3rem;}
+  .outcome-item p{color:var(--navy);font-size:0.88rem;margin:0;line-height:1.5;}
+  .how-to-use{background:var(--gold-light);border:1px solid #e8d4a0;border-radius:8px;padding:1.1rem 1.4rem;font-size:0.9rem;color:#5a4010;}
+  .how-to-use strong{color:#7a5510;}
+  .step-chips{display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.7rem;}
+  .step-chip{background:#fff;border:1px solid #d4b96a;border-radius:20px;padding:0.2rem 0.8rem;font-size:0.8rem;color:#7a5510;font-weight:500;}
+
+  /* SECTION TABS */
+  .sections-nav{display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+  .section-tab{padding:0.5rem 1.2rem;border-radius:6px;font-size:0.82rem;font-weight:600;letter-spacing:0.02em;cursor:pointer;border:1.5px solid transparent;transition:all 0.2s;text-transform:uppercase;text-decoration:none;}
+  .section-tab.s1{background:var(--teal-light);color:var(--teal);border-color:#a0d8cf;}
+  .section-tab.s2{background:var(--accent-light);color:var(--accent);border-color:#a8ccec;}
+  .section-tab.s3{background:var(--purple-light);color:var(--purple);border-color:#c0b3e8;}
+  .section-tab.s4{background:var(--coral-light);color:var(--coral);border-color:#e8b8ae;}
+  .section-tab.s5{background:var(--green-light);color:var(--green);border-color:#a8d4b0;}
+  .section-tab:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(0,0,0,0.1);}
+
+  /* SECTION CARDS */
+  .section-card{background:var(--white);border-radius:12px;border:1px solid var(--border);margin-bottom:2rem;box-shadow:var(--card-shadow);overflow:hidden;scroll-margin-top:80px;}
+  .section-header{padding:1.5rem 2rem;display:flex;align-items:flex-start;gap:1.2rem;border-bottom:1px solid var(--border);}
+  .section-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;}
+  .s1 .section-icon{background:var(--teal-light);}
+  .s2 .section-icon{background:var(--accent-light);}
+  .s3 .section-icon{background:var(--purple-light);}
+  .s4 .section-icon{background:var(--coral-light);}
+  .s5 .section-icon{background:var(--green-light);}
+  .section-header-text h3{font-family:'DM Serif Display',serif;font-size:1.35rem;font-weight:400;color:var(--navy);line-height:1.2;margin-bottom:0.2rem;}
+  .section-label{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;}
+  .s1 .section-label{color:var(--teal);}
+  .s2 .section-label{color:var(--accent);}
+  .s3 .section-label{color:var(--purple);}
+  .s4 .section-label{color:var(--coral);}
+  .s5 .section-label{color:var(--green);}
+  .section-body{padding:2rem;}
+  .section-divider{height:3px;border-radius:2px;margin-bottom:2rem;}
+  .s1 .section-divider{background:linear-gradient(to right,var(--teal),transparent);}
+  .s2 .section-divider{background:linear-gradient(to right,var(--accent),transparent);}
+  .s3 .section-divider{background:linear-gradient(to right,var(--purple),transparent);}
+  .s4 .section-divider{background:linear-gradient(to right,var(--coral),transparent);}
+  .s5 .section-divider{background:linear-gradient(to right,var(--green),transparent);}
+
+  /* CONTENT BLOCKS */
+  .content-block{margin-bottom:2rem;}
+  .content-block h4{font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-light);margin-bottom:0.75rem;padding-bottom:0.4rem;border-bottom:1px solid var(--border);}
+  .content-block p{color:var(--text-muted);font-size:0.93rem;margin-bottom:0.75rem;}
+  .content-block p:last-child{margin-bottom:0;}
+  .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;margin-top:0.75rem;}
+  .info-pill{border-radius:8px;padding:0.85rem 1rem;font-size:0.85rem;}
+  .info-pill strong{display:block;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.25rem;font-weight:600;}
+  .s1 .info-pill{background:var(--teal-light);color:#0a5548;}
+  .s1 .info-pill strong{color:var(--teal);}
+  .s2 .info-pill{background:var(--accent-light);color:#0a3d6a;}
+  .s2 .info-pill strong{color:var(--accent);}
+  .s3 .info-pill{background:var(--purple-light);color:#3a2070;}
+  .s3 .info-pill strong{color:var(--purple);}
+  .s4 .info-pill{background:var(--coral-light);color:#7a2010;}
+  .s4 .info-pill strong{color:var(--coral);}
+  .s5 .info-pill{background:var(--green-light);color:#1a5025;}
+  .s5 .info-pill strong{color:var(--green);}
+
+  /* VIDEO LINK BOX */
+  .video-link-box{border-radius:10px;padding:1.2rem 1.5rem;margin-top:1.2rem;display:flex;align-items:center;gap:1rem;border:1px solid;}
+  .s1 .video-link-box{background:var(--teal-light);border-color:#a0d8cf;}
+  .s2 .video-link-box{background:var(--accent-light);border-color:#a8ccec;}
+  .s3 .video-link-box{background:var(--purple-light);border-color:#c0b3e8;}
+  .s4 .video-link-box{background:var(--coral-light);border-color:#e8b8ae;}
+  .s5 .video-link-box{background:var(--green-light);border-color:#a8d4b0;}
+  .video-play-btn{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;color:#fff;}
+  .s1 .video-play-btn{background:var(--teal);}
+  .s2 .video-play-btn{background:var(--accent);}
+  .s3 .video-play-btn{background:var(--purple);}
+  .s4 .video-play-btn{background:var(--coral);}
+  .s5 .video-play-btn{background:var(--green);}
+  .video-link-text{font-size:0.9rem;}
+  .video-link-text strong{display:block;margin-bottom:0.2rem;color:var(--navy);}
+  .video-link-text .tutor-note{font-size:0.75rem;color:var(--text-light);font-style:italic;}
+  .video-link-text a{font-weight:600;font-size:0.88rem;}
+  .s1 .video-link-text a{color:var(--teal);}
+  .s2 .video-link-text a{color:var(--accent);}
+  .s3 .video-link-text a{color:var(--purple);}
+  .s4 .video-link-text a{color:var(--coral);}
+  .s5 .video-link-text a{color:var(--green);}
+
+  /* ACTIVITY BOX */
+  .activity-box{border-radius:10px;padding:1.5rem;margin-top:0.5rem;border:1px solid;}
+  .s1 .activity-box{background:var(--teal-light);border-color:#a0d8cf;}
+  .s2 .activity-box{background:var(--accent-light);border-color:#a8ccec;}
+  .s3 .activity-box{background:var(--purple-light);border-color:#c0b3e8;}
+  .s4 .activity-box{background:var(--coral-light);border-color:#e8b8ae;}
+  .s5 .activity-box{background:var(--green-light);border-color:#a8d4b0;}
+  .activity-prompt{font-size:0.95rem;font-style:italic;margin-bottom:1rem !important;line-height:1.6;}
+  .s1 .activity-prompt{color:#0a5548;}
+  .s2 .activity-prompt{color:#0a3d6a;}
+  .s3 .activity-prompt{color:#3a2070;}
+  .s4 .activity-prompt{color:#7a2010;}
+  .s5 .activity-prompt{color:#1a5025;}
+  .submit-link-row{display:flex;align-items:center;gap:0.5rem;font-size:0.88rem;font-weight:500;margin-top:0.5rem;}
+  .s1 .submit-link-row{color:#0a5548;}
+  .s2 .submit-link-row{color:#0a3d6a;}
+  .s3 .submit-link-row{color:#3a2070;}
+  .s4 .submit-link-row{color:#7a2010;}
+  .s5 .submit-link-row{color:#1a5025;}
+  .submit-link-row a{font-weight:700;}
+  .s1 .submit-link-row a{color:var(--teal);}
+  .s2 .submit-link-row a{color:var(--accent);}
+  .s3 .submit-link-row a{color:var(--purple);}
+  .s4 .submit-link-row a{color:var(--coral);}
+  .s5 .submit-link-row a{color:var(--green);}
+
+  /* CHECK BOX */
+  .check-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.5rem;margin-top:0.5rem;}
+  .check-box p{color:var(--text-muted);font-size:0.9rem;margin-bottom:0.6rem;}
+
+  /* SOURCE TAG */
+  .source-tag{display:inline-flex;align-items:center;background:var(--navy-light);color:var(--navy);border-radius:4px;padding:0.15rem 0.55rem;font-size:0.72rem;font-weight:600;letter-spacing:0.04em;margin:0.15rem;}
+
+  /* TABLE */
+  .eval-table{width:100%;border-collapse:collapse;margin-top:0.75rem;font-size:0.88rem;}
+  .eval-table th{background:var(--navy);color:#fff;padding:0.6rem 0.9rem;text-align:left;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;}
+  .eval-table td{padding:0.6rem 0.9rem;border-bottom:1px solid var(--border);color:var(--text-muted);vertical-align:top;}
+  .eval-table tr:nth-child(even) td{background:var(--bg);}
+  .eval-table .bad{color:var(--coral);font-weight:600;}
+  .eval-table .good{color:var(--teal);font-weight:600;}
+
+  /* CONTENT LIST */
+  .content-list{list-style:none;display:flex;flex-direction:column;gap:0.5rem;margin-top:0.5rem;}
+  .content-list li{display:flex;align-items:flex-start;gap:0.6rem;font-size:0.9rem;color:var(--text-muted);line-height:1.5;}
+  .content-list li::before{content:'→';font-weight:600;flex-shrink:0;margin-top:0.05rem;}
+  .s1 .content-list li::before{color:var(--teal);}
+  .s2 .content-list li::before{color:var(--accent);}
+  .s3 .content-list li::before{color:var(--purple);}
+  .s4 .content-list li::before{color:var(--coral);}
+  .s5 .content-list li::before{color:var(--green);}
+
+  /* EVALUATION SECTION */
+  .eval-section{background:var(--navy);color:#fff;border-radius:12px;padding:2.5rem;margin-top:2.5rem;text-align:center;}
+  .eval-section h2{font-family:'DM Serif Display',serif;font-size:1.8rem;font-weight:400;margin-bottom:0.75rem;}
+  .eval-section p{color:rgba(255,255,255,0.75);font-size:0.95rem;margin-bottom:1.5rem;}
+  .eval-cta-btn{display:inline-block;background:var(--gold);color:var(--navy);border-radius:8px;padding:0.9rem 2.5rem;font-family:'DM Serif Display',serif;font-size:1.1rem;text-decoration:none;font-weight:600;transition:all 0.2s;letter-spacing:0.01em;}
+  .eval-cta-btn:hover{background:#d4a835;transform:translateY(-2px);box-shadow:0 6px 20px rgba(200,154,46,0.35);}
+
+  /* FOOTER */
+  footer{border-top:1px solid var(--border);padding:1.5rem 2rem;text-align:center;font-size:0.8rem;color:var(--text-light);background:var(--white);margin-top:3rem;}
+
+  /* RESPONSIVE */
+  @media(max-width:768px){
+    .header-inner{padding:0 1rem;}
+    nav a{font-size:0.65rem;padding:0.3rem 0.4rem;}
+    .page-wrap{padding:1.5rem 1rem;}
+    .section-body,.start-here{padding:1.25rem;}
+    .eval-section{padding:1.5rem;}
+    .hero{padding:2.5rem 1.5rem 2rem;}
+    .video-link-box{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="site-title">MGNT322 · <span>Group Module</span></div>
+    <nav>
+      <a href="#start-here" class="active">Start Here</a>
+      <a href="#section-1">Observations</a>
+      <a href="#section-2">Questionnaires</a>
+      <a href="#section-3">Feedback Forms</a>
+      <a href="#section-4">Interviews</a>
+      <a href="#section-5">Quizzes</a>
+      <a href="#evaluation">Evaluation</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">Topic 6 · MGNT322 Spring 2026</div>
+  <h1>Evaluating Learning and<br><em>Training Effectiveness</em></h1>
+  <p>A collaborative online learning module designed for HR coordinators, trainers, and L&D staff responsible for measuring whether workplace training actually works.</p>
+  <div class="hero-meta">
+    <div class="hero-meta-item">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      5 Sections · 5 Students
+    </div>
+    <div class="hero-meta-item">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Estimated: 30–40 minutes
+    </div>
+    <div class="hero-meta-item">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Complete all 5 sections + evaluation
+    </div>
+  </div>
+</div>
+
+<div class="page-wrap">
+
+  <!-- START HERE -->
+  <div class="start-here" id="start-here">
+    <h2><span class="start-icon">📌</span> Start Here</h2>
+    <p>Welcome to this group training module on <strong>Evaluating Learning and Training Effectiveness</strong>. This module will equip you with five practical evaluation methods used in real workplaces. By the end, you will be able to select and apply the right evaluation method for a given training context.</p>
+    <div class="outcomes-grid">
+      <div class="outcome-item">
+        <div class="num">Outcome 1</div>
+        <p>Identify and distinguish between five key evaluation methods used in training contexts.</p>
+      </div>
+      <div class="outcome-item">
+        <div class="num">Outcome 2</div>
+        <p>Select an appropriate evaluation method to match a specific workplace training scenario.</p>
+      </div>
+      <div class="outcome-item">
+        <div class="num">Outcome 3</div>
+        <p>Analyse the strengths and limitations of each method and justify design choices.</p>
+      </div>
+    </div>
+    <div class="how-to-use">
+      <strong>How to complete this module:</strong> Work through each section in order. Every section has learning content, a video, an application activity, and a learning check. Once you finish all five sections, scroll down to complete the shared Evaluation Form at the bottom — this is required for your completion to be recorded.
+      <div class="step-chips">
+        <span class="step-chip">① Read the content</span>
+        <span class="step-chip">② Watch the video</span>
+        <span class="step-chip">③ Submit the activity via link</span>
+        <span class="step-chip">④ Submit the learning check via link</span>
+        <span class="step-chip">⑤ Submit the evaluation form</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAV TABS -->
+  <div class="sections-nav">
+    <a href="#section-1" class="section-tab s1">Section 1: Observations</a>
+    <a href="#section-2" class="section-tab s2">Section 2: Questionnaires</a>
+    <a href="#section-3" class="section-tab s3">Section 3: Feedback Forms</a>
+    <a href="#section-4" class="section-tab s4">Section 4: Interviews</a>
+    <a href="#section-5" class="section-tab s5">Section 5: Quizzes / Knowledge Checks</a>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 1: OBSERVATIONS — Natasha Kivuvani (8370266)
+  ═══════════════════════════════════ -->
+  <div class="section-card s1" id="section-1">
+    <div class="section-header">
+      <div class="section-icon">👁️</div>
+      <div class="section-header-text">
+        <div class="section-label">Section 1 · Natasha Kivuvani · 8370266</div>
+        <h3>Observation as a Training Evaluation Method</h3>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="section-divider"></div>
+
+      <div class="content-block">
+        <h4>📖 Learning Content</h4>
+        <p>Many HR staff reach for a post-training survey by default. But a survey only tells you how people <em>felt</em> about training — it cannot show you whether they did anything differently back on the job. This section introduces observation: one of the most direct ways to evaluate whether training actually changed workplace behaviour. It sits at <strong>Kirkpatrick Level 3 — Behaviour</strong>, and it is the method to use when you need real evidence, not just reactions.</p>
+
+        <p><strong>What is Workplace Observation?</strong><br>
+        Observation means systematically watching a learner perform a task in their real or simulated work environment — after training has occurred — to see whether their behaviour has changed. There are two types:</p>
+        <ul class="content-list">
+          <li><strong>Structured observation</strong> — uses a pre-designed checklist. The observer knows exactly what behaviours to look for before they walk in. This is the most common and reliable approach for L&D evaluation.</li>
+          <li><strong>Unstructured observation</strong> — open-ended field notes with no fixed criteria. More flexible, but harder to compare across observers or time points.</li>
+        </ul>
+        <p>Observation works best for skills-based training: safety procedures, customer service, clinical practice, or any situation where <em>how</em> someone does something matters — not just whether they can recall the theory.</p>
+
+        <div class="info-grid">
+          <div class="info-pill"><strong>Strengths</strong>Shows real behaviour — not self-reported recall. Rich, contextual data about how and why someone acts. Works well for procedural and soft-skills training. Provides strong Level 3 evidence.</div>
+          <div class="info-pill"><strong>Limitations</strong>Hawthorne Effect — people behave differently when watched. Time-intensive and difficult to scale. Requires trained, objective observers. Can feel intrusive if not managed carefully.</div>
+          <div class="info-pill"><strong>Kirkpatrick Level</strong>Level 3 — Behaviour: evaluates whether training changed how employees actually perform on the job.</div>
+          <div class="info-pill"><strong>The Hawthorne Effect</strong>People tend to change their behaviour simply because they know they are being observed — not because of the training. To reduce this, conduct multiple unannounced visits over time or embed observation into regular supervision.</div>
+        </div>
+
+        <p style="margin-top:1.2rem;"><strong>Example: Customer Service Observation Checklist</strong></p>
+        <table class="eval-table">
+          <thead><tr><th>Observable Behaviour</th><th>Rating</th></tr></thead>
+          <tbody>
+            <tr><td>Agent greets caller by name within 30 seconds</td><td>Did / Did not / Partially</td></tr>
+            <tr><td>Agent uses at least one empathy statement during the call</td><td>Did / Did not / Partially</td></tr>
+            <tr><td>Agent confirms resolution before ending the call</td><td>Did / Did not / Partially</td></tr>
+          </tbody>
+        </table>
+
+        <p style="margin-top:1rem;">Sources: <span class="source-tag">Kirkpatrick &amp; Kirkpatrick, 2016</span> <span class="source-tag">CIPD, 2023</span> <span class="source-tag">CIPD, 2024</span></p>
+      </div>
+
+      <!-- VIDEO -->
+      <div class="content-block">
+        <h4>🎬 Instructional Video</h4>
+        <div class="video-link-box">
+          <div class="video-play-btn">▶</div>
+          <div class="video-link-text">
+            <strong>Observation as a Training Evaluation Method</strong>
+            <span class="tutor-note">Click the link to watch the video</span>
+            <a href="https://canva.link/655epso58sjw4no" target="_blank">https://canva.link/655epso58sjw4no</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div class="content-block">
+        <h4>✏️ Application Activity</h4>
+        <div class="activity-box">
+          <div class="submit-link-row">📎 Submit via Google Forms: <a href="https://docs.google.com/forms/d/e/1FAIpQLSeAzXDNtPv-wV1owEQD3BqoiEScNS3bJDjudHxH9fOkQvcRvw/viewform?fbzx=7396461984631255202" target="_blank">Click here to submit</a></div>
+        </div>
+      </div>
+
+      <!-- LEARNING CHECK -->
+      <div class="content-block">
+        <h4>✅ Learning Check</h4>
+        <div class="check-box">
+          <div class="submit-link-row">📎 Submit via Google Forms: <a href="https://docs.google.com/forms/d/e/1FAIpQLSeAzXDNtPv-wV1owEQD3BqoiEScNS3bJDjudHxH9fOkQvcRvw/viewform?fbzx=7396461984631255202" target="_blank">Click here to submit</a></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 2: QUESTIONNAIRES — Ayna Mudasar Ali (8702986)
+  ═══════════════════════════════════ -->
+  <div class="section-card s2" id="section-2">
+    <div class="section-header">
+      <div class="section-icon">📋</div>
+      <div class="section-header-text">
+        <div class="section-label">Section 2 · Ayna Mudasar Ali · 8702986</div>
+        <h3>Using Questionnaires to Evaluate Training Effectiveness</h3>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="section-divider"></div>
+
+      <div class="content-block">
+        <h4>📖 Learning Content</h4>
+        <p>Questionnaires are one of the most commonly used tools in workplace learning evaluations. They allow HR professionals and L&D staff to gather feedback from learners, identify strengths and weaknesses in training programmes, and assess training effectiveness. They are simple, flexible tools used to measure learner satisfaction, understanding, and areas for improvement.</p>
+
+        <p><strong>Target Audience:</strong> This section is aimed at HR coordinators and junior L&D employees responsible for workplace training assessments.</p>
+
+        <p><strong>Learning Outcomes</strong></p>
+        <ul class="content-list">
+          <li>Understand the role of questionnaires in training evaluation.</li>
+          <li>Differentiate between reaction-based and learning-based questions.</li>
+          <li>Create effective evaluation questions.</li>
+        </ul>
+
+        <p style="margin-top:1rem;"><strong>Why Training Evaluation Matters</strong><br>
+        Proper evaluation of training justifies organisational investments and identifies areas for improvement. It also ensures that employee development aligns with organisational goals.</p>
+
+        <p><strong>Kirkpatrick's Evaluation Model</strong><br>
+        This section uses Kirkpatrick's framework for evaluating training effectiveness by measuring learner reactions and acquired knowledge. It focuses on two levels: <strong>Level 1 (Reaction)</strong> — gathering learner feedback, measuring satisfaction, engagement, and overall perception of the training; and <strong>Level 2 (Learning)</strong> — determining whether learners have acquired the intended knowledge and skills through the training programme. Questionnaires are commonly used to evaluate both levels.</p>
+
+        <p><strong>Types of Questionnaire Questions</strong></p>
+        <div class="info-grid">
+          <div class="info-pill">
+            <strong>Reaction Questions (Level 1)</strong>
+            Gauge satisfaction and engagement with training. e.g. "Was the training content clear?" / "Was the training relevant to your job role?" / "Did the training meet your expectations?"
+          </div>
+          <div class="info-pill">
+            <strong>Learning Questions (Level 2)</strong>
+            Assess knowledge and skills acquired. e.g. "What is one concept you learned?" / "How would you apply this skill at work?" / "Which evaluation method measures performance improvement best?"
+          </div>
+          <div class="info-pill">
+            <strong>Effective Questionnaire Characteristics</strong>
+            Clear, short, focused, and aligned with learning outcomes · Includes both rating scale and open-ended questions
+          </div>
+          <div class="info-pill">
+            <strong>Common Mistakes</strong>
+            Focusing solely on satisfaction rather than learning outcomes · Vague questioning and leading questions reduce data quality and effectiveness
+          </div>
+        </div>
+
+        <p style="margin-top:1rem;">Sources: <span class="source-tag">Kirkpatrick, 2016</span> <span class="source-tag">Cloke, 2023</span> <span class="source-tag">CIPD</span> <span class="source-tag">ATD</span></p>
+      </div>
+
+      <!-- VIDEO -->
+      <div class="content-block">
+        <h4>🎬 Instructional Video</h4>
+        <div class="video-link-box">
+          <div class="video-play-btn">▶</div>
+          <div class="video-link-text">
+            <strong>Using Questionnaires to Evaluate Training Effectiveness</strong>
+            <span class="tutor-note">Click the link to watch the video</span>
+            <a href="https://canva.link/b8i0w30hd8m9j55" target="_blank">https://canva.link/b8i0w30hd8m9j55</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div class="content-block">
+        <h4>✏️ Application Activity</h4>
+        <div class="activity-box">
+          <div class="submit-link-row">📎 Submit via Google Forms: <a href="https://canva.link/79xxvi5odreqc63" target="_blank">https://canva.link/79xxvi5odreqc63</a></div>
+        </div>
+      </div>
+
+      <!-- LEARNING CHECK -->
+      <div class="content-block">
+        <h4>✅ Learning Check</h4>
+        <div class="check-box">
+          <div class="submit-link-row">📎 Submit via Google Forms: <a href="https://canva.link/n42rsfziusx4t7i" target="_blank">https://canva.link/n42rsfziusx4t7i</a></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 3: FEEDBACK FORMS — Hessa Shaju (9962578)
+  ═══════════════════════════════════ -->
+  <div class="section-card s3" id="section-3">
+    <div class="section-header">
+      <div class="section-icon">📝</div>
+      <div class="section-header-text">
+        <div class="section-label">Section 3 · Hessa Shaju · 9962578</div>
+        <h3>Feedback Forms as a Training Evaluation Tool</h3>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="section-divider"></div>
+
+      <div class="content-block">
+        <h4>📖 Learning Content</h4>
+        <p>Most HR coordinators are skilled at organising training: booking sessions, managing attendance, and sending reminders. But evaluation is often an afterthought — a quick satisfaction form that tells you whether people enjoyed the session, not whether anything actually changed.</p>
+        <p>This section introduces you to <strong>Kirkpatrick's Four-Level Evaluation Model</strong>, a practical framework used by L&D professionals worldwide, and focuses on how to design meaningful feedback and evaluation tools that give you real evidence that your training worked.</p>
+
+        <p><strong>Who this is for:</strong> You coordinate and run training programmes at your organisation, but when your manager asks "did that training actually work?", do you have a confident answer?</p>
+
+        <p><strong>By the end of this section, you will be able to:</strong></p>
+        <ul class="content-list">
+          <li>Identify the four levels of Kirkpatrick's Evaluation Model and what each level measures</li>
+          <li>Distinguish between a feedback form that only measures reaction and one that also captures evidence of learning</li>
+          <li>Design at least two evaluation questions that go beyond satisfaction to measure whether learning actually occurred</li>
+        </ul>
+
+        <p style="margin-top:1rem;"><strong>Kirkpatrick's Four-Level Evaluation Model</strong><br>
+        Developed by Donald Kirkpatrick, this model gives you a structured way to evaluate training at four increasingly meaningful levels. As an HR coordinator, you are most likely measuring Level 1 (reaction) only. This section focuses on how to also capture Level 2 (learning) evidence — because together they give you a much stronger picture of training effectiveness.</p>
+
+        <div class="info-grid">
+          <div class="info-pill"><strong>Level 1 — Reaction</strong>Did learners find the training useful and engaging? Measures satisfaction and perception.</div>
+          <div class="info-pill"><strong>Level 2 — Learning</strong>Did they actually gain knowledge or skills? Measures what changed in their understanding.</div>
+          <div class="info-pill"><strong>Level 3 — Behaviour</strong>Are they applying it back on the job? Measures real workplace behaviour change.</div>
+          <div class="info-pill"><strong>Level 4 — Results</strong>Did it impact the organisation's goals? Measures broader business outcomes.</div>
+        </div>
+
+        <p style="margin-top:1.2rem;"><strong>Weak vs Strong Feedback Forms</strong><br>Most organisations use a basic end-of-training form. Here is the difference:</p>
+        <table class="eval-table">
+          <thead><tr><th class="bad">✗ Weak Form (Reaction only)</th><th class="good">✓ Strong Form (Reaction + Learning)</th></tr></thead>
+          <tbody>
+            <tr><td>"Rate the trainer out of 5"</td><td>"How clearly was the content explained?" (1–5)</td></tr>
+            <tr><td>"Did you enjoy today's session?"</td><td>"What is one thing you will do differently at work?"</td></tr>
+            <tr><td>"Would you recommend this training?"</td><td>"Describe the main idea in your own words"</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:0.75rem;">The strong form gives you data you can actually analyse and act on. The weak form only tells you if people were happy — which is useful but nowhere near enough.</p>
+
+        <p style="margin-top:0.5rem;"><strong>⚠️ The problem:</strong> Collecting a 5-star satisfaction rating after training tells you whether people enjoyed it. It does not tell you whether they learned anything or changed their behaviour at work. These are very different things.</p>
+
+        <p style="margin-top:0.75rem;">For additional resources, visit: <a href="https://www.kirkpatrickpartners.com/the-kirkpatrick-model/" target="_blank" style="color:var(--purple);font-weight:600;">kirkpatrickpartners.com</a> or search: Setyadi et al. (2024). Evaluating training effectiveness using Kirkpatrick's Model. <em>Conference On Accounting And Business</em>, p. 128.</p>
+
+        <p style="margin-top:1rem;">Sources: <span class="source-tag">Kirkpatrick &amp; Kirkpatrick, 2016</span> <span class="source-tag">Setyadi et al., 2024</span> <span class="source-tag">CIPD</span></p>
+      </div>
+
+      <!-- VIDEO -->
+      <div class="content-block">
+        <h4>🎬 Instructional Video</h4>
+        <div class="video-link-box">
+          <div class="video-play-btn">▶</div>
+          <div class="video-link-text">
+            <strong>Feedback Forms as a Training Evaluation Tool</strong>
+            <span class="tutor-note">Click the link to watch the video</span>
+            <a href="https://canva.link/oi4dlr3fzg2eh6i" target="_blank">https://canva.link/oi4dlr3fzg2eh6i</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div class="content-block">
+        <h4>✏️ Application Activity</h4>
+        <div class="activity-box">
+          <p class="activity-prompt">Think of a training programme you have attended, organised, or heard about. Imagine you are the HR coordinator responsible for evaluating it. Design a short feedback form with <strong>at least two questions</strong>: one that measures learner reaction (Level 1) and one that captures evidence of learning (Level 2). For each question, explain which Kirkpatrick level it targets and why it is more useful than a simple satisfaction rating.</p>
+          <div class="submit-link-row">📎 Submit via the link: <a href="https://canva.link/enajztzmlbg44ub" target="_blank">https://canva.link/enajztzmlbg44ub</a></div>
+        </div>
+      </div>
+
+      <!-- LEARNING CHECK -->
+      <div class="content-block">
+        <h4>✅ Learning Check</h4>
+        <div class="check-box">
+          <p>Test your understanding of the difference between weak and strong feedback forms, and how Kirkpatrick's levels apply to feedback form design.</p>
+          <div class="submit-link-row">📎 Submit via the link: <a href="https://canva.link/enajztzmlbg44ub" target="_blank">https://canva.link/enajztzmlbg44ub</a></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 4: INTERVIEWS — Siya Singh (8372214)
+  ═══════════════════════════════════ -->
+  <div class="section-card s4" id="section-4">
+    <div class="section-header">
+      <div class="section-icon">🎙️</div>
+      <div class="section-header-text">
+        <div class="section-label">Section 4 · Siya Singh · 8372214</div>
+        <h3>Using Interviews to Measure Training Effectiveness</h3>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="section-divider"></div>
+
+      <div class="content-block">
+        <h4>📖 Learning Content</h4>
+        <p><strong>Target Audience:</strong> HR Coordinators, Workplace Trainers, Team Leaders, and L&D Staff. Many HR coordinators collect training feedback via simple surveys, but struggle to gather deeper insights into behavioural change and learning transfer. This section shows how interviews can be used to provide more meaningful evaluation of training effectiveness.</p>
+
+        <p><strong>Learning Outcome:</strong> At the end of this section, learners will be able to develop 3–4 well-formed interview questions to assess the outcome of workplace training and the behavioural change of employees.</p>
+
+        <p><strong>Linked to Kirkpatrick's Model</strong><br>
+        Training evaluation measures programme success — measuring learner reaction, understanding, and application in the real world. Interviews are especially powerful for evaluating <strong>Level 3 — Behaviour</strong>: do employees use new skills at work?</p>
+
+        <div class="info-grid">
+          <div class="info-pill"><strong>What Are Evaluation Interviews?</strong>A formal discussion method for collecting in-depth qualitative feedback from employees following workplace training — showing what surveys cannot.</div>
+          <div class="info-pill"><strong>Deeper Insights</strong>Understand the 'why' behind learner responses, not just the 'what'. Richer responses than simple rating scales or tick-box surveys.</div>
+          <div class="info-pill"><strong>Behavioural Evidence</strong>Determine if and how employees apply new skills at work. Identifies emotional reactions and attitudes that surveys miss.</div>
+          <div class="info-pill"><strong>Advantages</strong>Provides detailed, nuanced responses · Allows clarification of ambiguous answers · Better understanding of behavioural change</div>
+        </div>
+
+        <p style="margin-top:1.2rem;"><strong>Types of Interviews Used in Training Evaluation</strong></p>
+        <div class="info-grid">
+          <div class="info-pill"><strong>Structured</strong>Fixed, predetermined questions. Easier to compare answers across employees. Best for: standardised evaluation with large groups.</div>
+          <div class="info-pill"><strong>Semi-Structured ★ Recommended</strong>Mix of set and open questions. Best balance of consistency and depth. Best for: training evaluation in most workplace settings.</div>
+          <div class="info-pill"><strong>Unstructured</strong>Open, conversational approach. Maximum depth and flexibility. Best for: exploratory or pilot feedback.</div>
+          <div class="info-pill"><strong>Limitations</strong>Takes a long time to conduct and analyse · Hard to compare at scale · Potential for interviewer bias · Requires good communication skills</div>
+        </div>
+
+        <p style="margin-top:1.2rem;"><strong>Adult Learning Principles Applied</strong></p>
+        <ul class="content-list">
+          <li><strong>Andragogy:</strong> Adults prefer practical workplace examples. This section uses real HR scenarios so learners connect theory to their daily roles.</li>
+          <li><strong>Constructive Alignment:</strong> Outcomes, activities, and checks are all aligned — learn interview types → design questions → validate via learning check.</li>
+          <li><strong>Experiential Learning:</strong> Learners apply concepts to authentic workplace scenarios, building confidence through doing rather than passive reading.</li>
+        </ul>
+
+        <p style="margin-top:1rem;"><strong>Key Takeaway:</strong> Interviews give training evaluation a human voice. When organisations move beyond tick-box surveys, they uncover the real story of whether training has changed how employees think, act, and perform on the job.</p>
+
+        <p style="margin-top:1rem;">Sources: <span class="source-tag">Bahl, Kiran &amp; Sharma, 2024</span> <span class="source-tag">ATD — Kirkpatrick Level 3</span> <span class="source-tag">HBR — Why Leadership Training Fails</span></p>
+      </div>
+
+      <!-- VIDEO -->
+      <div class="content-block">
+        <h4>🎬 Instructional Video</h4>
+        <div class="video-link-box">
+          <div class="video-play-btn">▶</div>
+          <div class="video-link-text">
+            <strong>Using Interviews to Measure Training Effectiveness</strong>
+            <span class="tutor-note">Click the link to watch the video</span>
+            <a href="https://canva.link/d61r0l95oie213w" target="_blank">https://canva.link/d61r0l95oie213w</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div class="content-block">
+        <h4>✏️ Application Activity</h4>
+        <div class="activity-box">
+          <p class="activity-prompt">You are an HR coordinator at a company that recently ran a conflict resolution training for team leaders. Six weeks later, your manager asks you to evaluate whether the training actually changed how team leaders handle disagreements. You decide to conduct semi-structured interviews with 5 participants.<br><br>
+          <strong>Task:</strong> Write 3–4 well-formed interview questions you would use. For each question, briefly explain what it is designed to reveal and which Kirkpatrick level it targets.</p>
+          <div class="submit-link-row">📎 Submit via the link: <a href="https://canva.link/7uian0d7moyr0mm" target="_blank">https://canva.link/7uian0d7moyr0mm</a></div>
+        </div>
+      </div>
+
+      <!-- LEARNING CHECK -->
+      <div class="content-block">
+        <h4>✅ Learning Check</h4>
+        <div class="check-box">
+          <p>Test your understanding of interview types, when to use them, and how to design effective evaluation interview questions linked to Kirkpatrick's model.</p>
+          <div class="submit-link-row">📎 Submit via the link: <a href="https://canva.link/7uian0d7moyr0mm" target="_blank">https://canva.link/7uian0d7moyr0mm</a></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       SECTION 5: QUIZZES — Andrew Mathews (8398082)
+  ═══════════════════════════════════ -->
+  <div class="section-card s5" id="section-5">
+    <div class="section-header">
+      <div class="section-icon">🧠</div>
+      <div class="section-header-text">
+        <div class="section-label">Section 5 · Andrew Mathews · 8398082</div>
+        <h3>Quizzes and Knowledge Checks as Evaluation Tools</h3>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="section-divider"></div>
+
+      <div class="content-block">
+        <h4>📖 Learning Content</h4>
+        <div class="module-introduction">
+
+  <p>
+    This module focuses on applying knowledge checks to evaluate whether training has been effective in achieving its intended outcomes. Rather than focusing on memorisation or simple recall, the emphasis is on applying evaluation concepts to realistic workplace situations. This reflects how organisations actually assess the success of training interventions, where evidence of impact is more important than participant opinions alone.
+  </p>
+
+  <p>
+    A key framework used in this module is the <strong>Kirkpatrick Model of Evaluation</strong>, which is one of the most widely used approaches in Learning and Development. It outlines four levels of training evaluation: Reaction (how participants feel about the training), Learning (what knowledge or skills they have gained), Behaviour (whether they apply learning in the workplace), and Results (the overall impact on organisational performance). Understanding these levels is essential for evaluating training effectiveness in a structured and meaningful way.
+  </p>
+
+  <p>
+    In many organisations, evaluation often stops at the reaction or learning level, such as asking participants whether they enjoyed the session or testing them with short quizzes immediately after training. While this information is useful, it does not provide a complete picture of training effectiveness. This module encourages you to go further by focusing on whether learning is transferred into real workplace behaviour, which is a more accurate indicator of training success.
+  </p>
+
+  <p>
+    Through a series of scenario-based knowledge checks, you will be asked to identify appropriate evaluation methods and match workplace situations to the correct Kirkpatrick level. These activities are designed to help you think like a Learning and Development practitioner by interpreting evidence, making judgments, and selecting suitable evaluation approaches. By the end of this module, you should be able to confidently apply the Kirkpatrick Model when assessing training effectiveness in practical settings.
+  </p>
+
+</div>
+
+        <ul class="content-list">
+          <li>Pre/post testing compares knowledge before and after to quantify learning gain</li>
+          <li>Scenario-based MCQs test decision-making, not just memorisation</li>
+          <li>Short written justifications reveal depth of understanding beyond a correct tick</li>
+          <li>Digital platforms (Google Forms, Moodle Quiz) enable automatic scoring and instant feedback</li>
+        </ul>
+
+        <div class="info-grid">
+          <div class="info-pill"><strong>Best used for</strong>Measuring knowledge or skill acquisition immediately after training. Works alongside other methods for a complete picture.</div>
+          <div class="info-pill"><strong>Kirkpatrick Level</strong>Level 2 — Learning: did the training change what learners know or can do?</div>
+          <div class="info-pill"><strong>Key Strength</strong>Objective, scalable, and provides immediate data on whether learning goals were met.</div>
+          <div class="info-pill"><strong>Key Limitation</strong>Cannot measure actual behaviour change on the job. A correct answer does not guarantee on-the-job application.</div>
+        </div>
+
+        <p style="margin-top:1rem;">Sources: <span class="source-tag">ATD — Assessment Design</span> <span class="source-tag">CIPD</span> <span class="source-tag">Kirkpatrick, 2016</span></p>
+      </div>
+
+      <!-- VIDEO -->
+      <div class="content-block">
+        <h4>🎬 Instructional Video</h4>
+        <div class="video-link-box">
+          <div class="video-play-btn">▶</div>
+          <div class="video-link-text">
+            <strong>Quizzes and Knowledge Checks as Evaluation Tools</strong>
+            <span class="tutor-note">Click the link to watch the video</span>
+            <a href="https://canva.link/ia4fyjlw4nnzbv4" target="_blank">https://canva.link/ia4fyjlw4nnzbv4</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div class="content-block">
+        <h4>✏️ Application Activity</h4>
+        <div class="activity-box">
+          <div class="activity-container">
+
+  <h2>Application Activity — Kirkpatrick Evaluation in Practice</h2>
+
+  <p>
+    You have delivered a 3-hour training programme for customer service staff focused on improving how they handle difficult customers. 
+    The training included role-play exercises, group discussions, and best-practice techniques.
+  </p>
+
+  <p>
+    Two weeks after the training, your manager asks you to evaluate whether the programme was effective. 
+    They specifically want to know whether the training has actually changed how employees behave on the job, 
+    not just whether they enjoyed the session or learned the theory.
+  </p>
+
+  <h3>Task:</h3>
+
+  <p>
+    Write a short response (4–6 sentences) explaining:
+  </p>
+
+  <ul>
+    <li> Which Kirkpatrick level you would focus on to evaluate this training</li>
+    <li> What specific evidence or method you would use to measure it in the workplace</li>
+    <li> Why this approach is more meaningful than only measuring participant satisfaction or quiz scores</li>
+  </ul>
+
+</div>
+          <div class="submit-link-row">📎 Submit via Google Forms: <a href="https://forms.gle/1N2oVKt7YnY3X6HS9" target="_blank">Click here to submit</a></div>
+        </div>
+      </div>
+
+      <!-- LEARNING CHECK -->
+      <div class="content-block">
+        <h4>✅ Learning Check</h4>
+        <div class="check-box">
+          <p>Apply what you have learned to scenario-based questions that test your ability to distinguish between recall-based and application-based knowledge checks, and to identify the appropriate Kirkpatrick level being measured.</p>
+          <div class="submit-link-row">📎 Submit via Google Forms: <a href="https://docs.google.com/forms/d/e/1FAIpQLScHpaiak5BBqQmIF4yRqnkafh-shKUKaGqzGTR2bOqgydCkUw/viewform" target="_blank">Click here to submit</a></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════
+       EVALUATION FORM
+  ═══════════════════════════════════ -->
+  <div class="eval-section" id="evaluation">
+    <h2>Evaluation Form</h2>
+    <p>You have completed all five sections. Please click the link below to complete the shared group evaluation form. This is required for your module completion to be recorded.</p>
+    <a class="eval-cta-btn" href="https://canva.link/zqrftf98ofg7rkm" target="_blank">Click the following link to do the evaluation form</a>
+  </div>
+
+</div>
+
+<footer>
+  MGNT322 Learning and Development in Organisations · Spring 2026 · University of Wollongong Dubai<br>
+  Topic 6 Group Module · Natasha Kivuvani · Ayna Mudasar Ali · Hessa Shaju · Siya Singh · Andrew Mathews
+</footer>
+
+<script>
+document.querySelectorAll('nav a').forEach(link => {
+  link.addEventListener('click', function() {
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+window.addEventListener('scroll', () => {
+  const sections = ['start-here','section-1','section-2','section-3','section-4','section-5','evaluation'];
+  const navLinks = document.querySelectorAll('nav a');
+  let current = '';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 100) current = id;
+  });
+  navLinks.forEach(a => {
+    a.classList.remove('active');
+    if (a.getAttribute('href') === '#' + current) a.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
